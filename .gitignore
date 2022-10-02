@@ -6,7 +6,9 @@ __pycache__
 # Output Images
 outputs
 
-# Log files for colab-convert
+# Log files  etc for colab-convert
 cc-outputs.log
-
 Deforum_Stable_Diffusion_test.ipynb
+
+# env
+env/
