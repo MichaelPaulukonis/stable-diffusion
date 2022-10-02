@@ -1159,26 +1159,38 @@ def render_interpolation(args, anim_args):
     args.n_samples = 1
     args.seed_behavior = 'fixed' # force fix seed at the moment bc only 1 seed is available
     prompts_c_s = [] # cache all the text embeddings
+    keyframe_idx = 0
+    frame_idx = 0
+    anim_args.max_frames = (len(args.prompts) - 1) * anim_args.interpolate_x_frames + len(args.prompts)
 
     print(f"Preparing for interpolation of the following...")
 
     for i, prompt in animation_prompts.items():
       args.prompt = prompt
 
+      print(f"Prompt {keyframe_idx+1} of {len(args.prompts)} - Frame {frame_idx + 1} of {anim_args.max_frames}")
+      print(f"{prompt}")
+
       # sample the diffusion model
       results = generate(args, return_c=True)
       c, image = results[0], results[1]
       prompts_c_s.append(c) 
       
-      # display.clear_output(wait=True)
       display.display(image)
       
       args.seed = next_seed(args)
+
+      filename = f"{args.timestring}_{frame_idx:05}.png"
+      image.save(os.path.join(args.outdir, filename))
+      
+      keyframe_idx += 1
+      frame_idx = (keyframe_idx * anim_args.interpolate_x_frames) + keyframe_idx
 
     display.clear_output(wait=True)
     print(f"Interpolation start...")
 
     frame_idx = 0
+    anim_args.max_frames = (len(prompts_c_s) -1) * anim_args.interpolate_x_frames + len(prompts_c_s)
 
     if anim_args.interpolate_key_frames:
       for i in range(len(prompts_c_s)-1):
@@ -1209,22 +1221,28 @@ def render_interpolation(args, anim_args):
     else:
       for i in range(len(prompts_c_s)-1):
         for j in range(anim_args.interpolate_x_frames+1):
-          # interpolate the text embedding
-          prompt1_c = prompts_c_s[i]
-          prompt2_c = prompts_c_s[i+1]  
-          args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
 
-          # sample the diffusion model
-          results = generate(args)
-          image = results[0]
+          if j != 0:
 
-          filename = f"{args.timestring}_{frame_idx:05}.png"
-          image.save(os.path.join(args.outdir, filename))
+            # interpolate the text embedding
+            prompt1_c = prompts_c_s[i]
+            prompt2_c = prompts_c_s[i+1]  
+            args.init_c = prompt1_c.add(prompt2_c.sub(prompt1_c).mul(j * 1/(anim_args.interpolate_x_frames+1)))
+
+            print(f"Prompt {i+1} of {len(args.prompts)} - Frame {frame_idx + 1} of {anim_args.max_frames}")
+            print(f"{prompt}")
+
+            # sample the diffusion model
+            results = generate(args)
+            image = results[0]
+
+            filename = f"{args.timestring}_{frame_idx:05}.png"
+            image.save(os.path.join(args.outdir, filename))
+
+            display.clear_output(wait=True)
+            display.display(image)
+
           frame_idx += 1
-
-          display.clear_output(wait=True)
-          display.display(image)
-
           args.seed = next_seed(args)
 
     # generate the last prompt
